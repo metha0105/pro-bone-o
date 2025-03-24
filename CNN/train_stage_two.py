@@ -5,7 +5,8 @@
 from data_handling import DataProcessing
 from stage_two import MultiFractureClassifier
 
-data_dir = "TBD"
+# data_dir modified for Google Colab
+data_dir = "/content/Pro-Bone-O/Data"
 dataset = DataProcessing(data_dir, multi_class = True)
 data_samples, data_labels = dataset.load_data()
 train_samples, train_labels, test_samples, test_labels = dataset.split_data(data_samples, data_labels)

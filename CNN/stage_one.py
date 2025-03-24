@@ -4,7 +4,6 @@
 # Stage 1: Determines whether there is a fracture
 
 import tensorflow as tf
-from data_handling import DataProcessing
 from typing import Tuple
 
 

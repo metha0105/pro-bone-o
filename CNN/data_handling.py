@@ -1,16 +1,11 @@
 # Authors: Vithusha (Metha) Tharmarasa, MinYoung Park
-# Last Modified: Mar. 22nd, 2024
+# Last Modified: Mar. 24th, 2024
 
 import os
-import re
+# import re
 import tensorflow as tf
-import numpy as np
-import skrf as rf # for reading .s2p files
-import random
-import matplotlib.pyplot as plt
-
-from typing import List, Tuple
-from collections import defaultdict
+# import numpy as np
+import skrf as rf
 from sklearn.model_selection import train_test_split
 
 class DataProcessing:
@@ -39,13 +34,11 @@ class DataProcessing:
             }
     
     def load_data(self):
-        filename_array = []
-        data_array = []
-        class_array = []
+        filename_array, data_array, class_array = [], [], []
 
         for subdir, _, files in os.walk(self.data_dir):
             for file in files:
-                if re.search("(.s2p)", file):
+                if file.endswith(".s2p"):
                     curr_filename = os.path.join(subdir, file)
                     curr_data = rf.Network(curr_filename).s
                     curr_class_label = self.class_mapping.get(subdir.replace(self.data_dir + "\\", "").strip(), 0)
@@ -59,47 +52,29 @@ class DataProcessing:
         return data_array, class_array
     
     def split_data(self, data_array, class_array):
-        split_correctly = False
-
-        while split_correctly == False:
-            indices = random.sample(range(len(data_array)), len(data_array))
-            shuffled_data_samples = [data_array[i] for i in indices]
-            shuffled_class_labels = [class_array[i] for i in indices]
-
-            train_samples = shuffled_data_samples[:(len(shuffled_data_samples) // 10) * 8]
-            train_labels = shuffled_class_labels[:(len(shuffled_class_labels) // 10) * 8]
-            test_samples = shuffled_data_samples[(len(shuffled_data_samples) // 10) * 8:]
-            test_labels = shuffled_class_labels[(len(shuffled_class_labels) // 10) * 8:]
-
-            if set(train_labels) == set(test_labels):
-            # Only exit if both train and test has the same number of classes
-                split_correctly = True
-            else:
-                split_correctly = False
+        train_samples, test_samples, train_labels, test_labels = train_test_split(
+            data_array, class_array, test_size = 1 - self.train_ratio, stratify = class_array, random_state = 42
+        )
         return train_samples, train_labels, test_samples, test_labels
     
-    def data_to_tensor(train_samples, train_labels, test_samples, test_labels):
-        # Load NumPy array with tensorflow docs
-        # https://www.tensorflow.org/tutorials/load_data/numpy#load_numpy_arrays_with_tfdatadataset
+    def data_to_tensor(self, train_samples, train_labels, test_samples, test_labels):
         train_samples = tf.ragged.constant(train_samples, dtype=tf.complex128).to_tensor()
         train_real_samples = tf.math.real(train_samples)
         train_imag_samples = tf.math.imag(train_samples)
-        #tf.print(train_real_samples, train_imag_samples, output_stream=os.sys.stderr, sep='\n\nXXXXXXXXX\n\n', summarize=None)
         train_complex_samples = tf.concat([train_real_samples, train_imag_samples], -1)
-        #tf.print(train_complex_samples, output_stream=os.sys.stderr, summarize=None)
         train_labels = tf.convert_to_tensor(train_labels, dtype=tf.float64)
 
-
-        # Currently debugging the test dataset because I think the label bit is broken from the split
         test_samples = tf.ragged.constant(test_samples, dtype=tf.complex128).to_tensor()
         test_real_samples = tf.math.real(test_samples)
         test_imag_samples = tf.math.imag(test_samples)
         test_complex_samples = tf.concat([test_real_samples, test_imag_samples], -1)
         test_labels = tf.convert_to_tensor(test_labels, dtype=tf.float64)
 
-        # Debugging line to determine if these tensors are outputting correctly
-        #tf.print(train_complex_samples, train_labels, output_stream=os.sys.stderr, sep='\n\nXXX\n\n', summarize=None)
-        #tf.print(test_complex_samples, test_labels, output_stream=os.sys.stderr, sep='\n\nXXX\n\n', summarize=-1)
+        print(f"Train Samples Shape: {train_complex_samples.shape}")
+        print(f"Test Samples Shape: {test_complex_samples.shape}")
 
-        print(train_complex_samples.shape)
         return train_complex_samples, train_labels, test_complex_samples, test_labels
+
+    def print_data_stats(self, train_labels, test_labels):
+        print("Training Set Class Distribution:", {i: train_labels.count(i) for i in set(train_labels)})
+        print("Test Set Class Distribution:", {i: test_labels.count(i) for i in set(test_labels)})
