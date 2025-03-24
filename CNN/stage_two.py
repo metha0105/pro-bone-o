@@ -3,7 +3,6 @@
 
 # Stage 2: If there is a fracture, it determines the fracture type
 import tensorflow as tf
-from data_handling import DataProcessing
 from typing import Tuple
 
 class MultiFractureClassifier:
